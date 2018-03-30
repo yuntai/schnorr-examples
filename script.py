@@ -147,9 +147,14 @@ class Script:
         current = s.read(1)
         while current != b'':
             op_code = current[0]
-            if op_code > 0 and op_code <= 75:
+            if op_code == 0:
+                elements.append(b'')
+            elif 0 < op_code <= op_code <= 75:
                 # we have an element
                 elements.append(s.read(op_code))
+            elif 76 <= op_code <=78: # OP_PUSHDATA[1,2,4]
+                sz = s.read(op_code - 76 + 1)[0]
+                elements.append(s.read(sz))
             else:
                 elements.append(op_code)
             current = s.read(1)

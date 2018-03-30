@@ -35,18 +35,13 @@ def hash160(s):
 def double_sha256(s):
     return hashlib.sha256(hashlib.sha256(s).digest()).digest()
 
+import functools
+count_prefix = lambda t, s: next((i for i,v in enumerate(s) if v != t), 0)
+count_zero = functools.partial(count_prefix, 0)
 
 def encode_base58(s):
-    # determine how many 0 bytes (b'\x00') s starts with
-    count = 0
-    for c in s:
-        if c == 0:
-            count += 1
-        else:
-            break
-    prefix = b'1' * count
-    # convert from binary to hex, then hex to integer
-    num = int(hexlify(s), 16)
+    prefix = BASE58_ALPHABET[:1] * count_zero(s) # b'1' == BASE58_ALPHABET[0]
+    num = int.from_bytes(s, byteorder='big')
     result = bytearray()
     while num > 0:
         num, mod = divmod(num, 58)
@@ -61,21 +56,35 @@ def encode_base58_checksum(s):
 
 def p2pkh_script(h160):
     '''Takes a hash160 and returns the scriptPubKey'''
+    # OP_DUP OP_HASH160 OP_20 OP_EQUALVERIFY OP_CHECKSIG
     return b'\x76\xa9\x14' + h160 + b'\x88\xac'
 
-def decode_base58_checksum(s):
-    combined = decode_base58(s)
-    checksum = combined[-4:]
-    if double_sha256(combined[:-4])[:4] != checksum:
-        raise RuntimeError('bad address: {} {}'.format(checksum, double_sha256(combined)[:4]))
-    return combined[:-4]
+def p2sh_script(h160):
+    '''Takes a hash160 and returns the scriptPubKey'''
+    # OP_HASH160 OP_20 <h160> OP_EQUAL
+    return b'\xa9\x14' + h160 + b'\x87'
 
 def decode_base58(s):
+    s = s.encode('ascii')
+
+    sz = len(s) - count_prefix(BASE58_ALPHABET[0], s)
+
     num = 0
-    for c in s.encode('ascii'):
+    for c in s:
         num *= 58
         num += BASE58_ALPHABET.index(c)
-    return num.to_bytes(25, byteorder='big')
+    sz = int(math.log(num)/math.log(256)+1)
+    #sz = int(sz * math.log(58)/math.log(256) + 1)
+    #return num.to_bytes(25, byteorder='big') # why 25
+    return num.to_bytes(sz, byteorder='big') # why 25
+
+def decode_base58_checksum(s): 
+    b = decode_base58(s)
+    checksum = b[-4:]
+    if double_sha256(b[:-4])[:4] != checksum:
+        raise RuntimeError('bad address: {} {}'.format(checksum, double_sha256(b[:-4])[:4]))
+    return b[:-4]
+    #return combined[1:-4]
 
 def read_varint(s):
     '''read_varint reads a variable integer from a stream'''
@@ -229,10 +238,14 @@ class HelperTest(TestCase):
     def test_base58(self):
         addr = 'mnrVtF8DWjMu839VW3rBfgYaAfKk8983Xf'
         b = decode_base58_checksum(addr)
-        h160 = b[1:-1]
+        prefix = b[:1]
+        h160 = hexlify(b[1:])
         want = b'507b27411ccf7f16f10297de6cef3f291623eddf'
         self.assertEqual(h160, want)
-        got = encode_base58_checksum(b'\x6f' + unhexlify(h160))
+        want = b'\x6f'
+        self.assertEqual(prefix, want)
+        #got = encode_base58_checksum(b'\x6f' + unhexlify(h160))
+        got = encode_base58_checksum(prefix + unhexlify(h160))
         self.assertEqual(got, addr)
 
     def test_flip_endian(self):

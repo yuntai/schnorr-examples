@@ -3,7 +3,7 @@ from io import BytesIO
 from random import randint
 from unittest import TestCase
 
-from helper import double_sha256, encode_base58, encode_base58_checksum, hash160, decode_base58
+from helper import double_sha256, encode_base58, encode_base58_checksum, hash160, decode_base58_checksum, big_endian_to_int
 
 
 class FieldElement:
@@ -698,27 +698,25 @@ class PrivateKey:
 
     @classmethod
     def parse(cls, s, compressed=True, testnet=False):
+        b = decode_base58_checksum(s)
         # prepend b'\xef' on testnet, b'\x80' on mainnet
         if testnet:
             prefix = b'\xef'
         else:
             prefix = b'\x80'
+
+        if prefix != b[:1]:
+            raise RuntimeError("bad suffix or prefix")
+
         # append b'\x01' if compressed
         if compressed:
             suffix = b'\x01'
+            if suffix != b[-1:]:
+                raise RuntimeError("bad suffix or prefix")
+            secret_bytes = b[1:-1]
         else:
-            suffix = b''
-        # encode_base58_checksum the whole thing
-        b = decode_base58(s)
-        if prefix != b[0] or suffix != b[-1]:
-            raise RuntimeError("bad suffix or prefix")
-        secret_bytes = b[1:-1]
-        checksum = b[-4:]
-        if double_sha256(secret_bytes)[:4] != checksum:
-            raise RuntimeError("checksum mismatch")
+            secret_bytes = b[1:]
         return cls(big_endian_to_int(secret_bytes))
-
-
 
 
 class PrivateKeyTest(TestCase):

@@ -222,7 +222,7 @@ class TxIn:
 
     cache = {}
 
-    def __init__(self, prev_tx, prev_index, script_sig, sequence):
+    def __init__(self, prev_tx, prev_index, script_sig, sequence=4294967295):
         self.prev_tx = prev_tx
         self.prev_index = prev_index
         self.script_sig = Script.parse(script_sig)
