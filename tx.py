@@ -217,7 +217,6 @@ class Tx:
         # convert the first element from little endian to int
         return little_endian_to_int(first_element)
 
-
 class TxIn:
 
     cache = {}
@@ -233,6 +232,17 @@ class TxIn:
             hexlify(self.prev_tx).decode('ascii'),
             self.prev_index,
         )
+
+    def nsequence(self):
+        # disable flag, type flag, masked value
+        disable_flag = 1<<31 & self.sequence
+        if not disable_flag:
+            type_flag = 1<<22 & self.sequence
+            val = 0x0000FFFF&self.sequence
+            if type_flag:
+                return (True, 'sec', val * 512)
+            else:
+                return (True, 'block', val)
 
     @classmethod
     def parse(cls, s):
