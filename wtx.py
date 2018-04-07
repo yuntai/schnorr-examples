@@ -1,5 +1,5 @@
 from binascii import hexlify, unhexlify
-from io import BytesIO
+from io import BytesIO, BufferedReader
 from unittest import TestCase
 
 import random
@@ -19,18 +19,17 @@ from helper import (
 from script import Script
 
 class Tx:
-    def __init__(self, version, tx_ins, tx_outs, locktime, *, witnesses=None, flag=1, testnet=False):
+    def __init__(self, version, tx_ins, tx_outs, locktime, testnet=False):
         self.version = version
         self.tx_ins = tx_ins
         self.tx_outs = tx_outs
         self.locktime = locktime
         self.testnet = testnet
-        self.witnesses = witnesses
-        self.flag = flag
 
     def txid(self):
-        """ non-witness serialization for txid"""
-        return double_sha256(self.nw_serialize())[::-1]
+        """ non-witness serialization for txid """
+        # as TxIn doesn't include signature anymore this serialization is immune to tx malleability problem
+        return double_sha256(self.serialize(with_witness=False))[::-1]
 
     def hash(self):
         """ witness id """
@@ -56,17 +55,21 @@ class Tx:
         '''Takes a byte stream and parses the transaction at the start
         return a Tx object
         '''
+        s = BufferedReader(s)
         # s.read(n) will return n bytes
         # version has 4 bytes, little-endian, interpret as int
         version = little_endian_to_int(s.read(4))
 
-        marker = s.read(1)[0]
-        if marker != 0:
-            raise RuntimeError('marker must be zero')
+        # check witness
+        peek = s.peek(2)
+        marker = peek[0]
+        flag = peek[1]
+        has_witnesses = False
 
-        flag = s.read(1)[0]
-        if flag == 0:
-            raise RuntimeError('flag must be nonzero')
+        if marker == 0 and flag == 1:
+            has_witnesses = True
+            # witness tx
+            s.read(2)
 
         # num_inputs is a varint, use read_varint(s)
         num_inputs = read_varint(s)
@@ -82,49 +85,27 @@ class Tx:
             outputs.append(TxOut.parse(s))
 
         # no of script witnesses implied by txin_count
-        witnesses = []
-        for _ in range(num_inputs):
-            num_witness = read_varint(s)
-            stack = [] # stack of bytes array
-            for _ in range(num_witness):
-                sz_witness = read_varint(s)
-                stack.append(s.read(sz_witness))
-            witnesses.append(stack)
+        if has_witnesses:
+            for tx_in in inputs:
+                for _ in range(read_varint(s)):
+                    sz_witness = read_varint(s)
+                    tx_in.script_witness.append(s.read(sz_witness))
 
         # locktime is 4 bytes, little-endian
         locktime = little_endian_to_int(s.read(4))
         # return an instance of the class (cls(...))
-        return cls(version, inputs, outputs, locktime, witnesses=witnesses, flag=1)
+        return cls(version, inputs, outputs, locktime)
 
-    def nw_serialize(self): # non-witness serialize
+
+    def serialize(self, with_witness=True):
         '''Returns the byte serialization of the transaction'''
         # serialize version (4 bytes, little endian)
         result = int_to_little_endian(self.version, 4)
 
-        # encode_varint on the number of inputs
-        result += encode_varint(len(self.tx_ins))
-        # iterate inputs
-        for tx_in in self.tx_ins:
-            # serialize each input
-            result += tx_in.serialize()
-        # encode_varint on the number of inputs
-        result += encode_varint(len(self.tx_outs))
-        # iterate outputs
-        for tx_out in self.tx_outs:
-            # serialize each output
-            result += tx_out.serialize()
-
-        # serialize locktime (4 bytes, little endian)
-        result += int_to_little_endian(self.locktime, 4)
-        return result
-
-    def serialize(self):
-        '''Returns the byte serialization of the transaction'''
-        # serialize version (4 bytes, little endian)
-        result = int_to_little_endian(self.version, 4)
-
-        result += b'\x00'         # marker
-        result += bytes([self.flag])
+        has_witnesses = any(len(t.script_witness) > 0 for t in self.tx_ins) and with_witness
+        if has_witnesses:
+            result += b'\x00'         # marker
+            result += b'\x01'         # flag
 
         # encode_varint on the number of inputs
         result += encode_varint(len(self.tx_ins))
@@ -140,13 +121,12 @@ class Tx:
             result += tx_out.serialize()
 
         # iterate witnesses for each input
-        for ix in range(len(self.tx_ins)):
-            result += encode_varint(len(self.witnesses[ix]))
-            # iterate witnesses
-            for w in self.witnesses[ix]:
-                # serialize each output
-                result += encode_varint(len(w))
-                result += w
+        if has_witnesses:
+            for tx_in in self.tx_ins:
+                result += encode_varint(len(tx_in.script_witness))
+                for w in tx_in.script_witness:
+                    result += encode_varint(len(w))
+                    result += w
 
         # serialize locktime (4 bytes, little endian)
         result += int_to_little_endian(self.locktime, 4)
@@ -292,6 +272,7 @@ class TxIn:
         self.prev_index = prev_index
         self.script_sig = Script.parse(script_sig)
         self.sequence = sequence
+        self.script_witness = []
 
     def __repr__(self):
         return '{}:{}'.format(
@@ -437,10 +418,14 @@ class TxOut:
         result += raw_script_pubkey
         return result
 
-
 class TxTest(TestCase):
     #bitcoin-cli getrawtransaction 8daadcbf5bac325f9b8d7812d82fcca4dd5a594c9f3c7e80727c565ef87e7b73 1|jq ".hex"
+    # with witness
     raw_tx_hex = '0100000000010243d652c3100a5523c644aed493a44b0ccf63b01500771876a8731ea7da6eb8120300000000ffffffff8fad638285b65e974fbcf27067d48651bdbbaf5ae5162cf89831dbc15ec260380400000000ffffffff04801a0600000000001976a914a856a8ebb8aeb82bbec88cabd398e6d1690690ad88acf0874b000000000017a91469f37704405df58ee210a89f24ae6a67a7ffe71f8700562183000000001976a914d8ff5d59bc4bba23546250e533cc01c0ee21883a88ac90e7280500000000220020701a8d401c84fb13e6baf169d59684e17abd9fa216c8cc5b9fc63d622ff8c58d04004830450221009d9ab1b126e25631c20c444f46c600d794c4aa8b4c864a3e664967f4c6ecc73b022019201da2fa3dc67d37817fbb3b91d160993892cbb1a0b335a8f61889871f39f10147304402201f6692696d35c615df6273daf60600f4b1b3f2e7d52610f791bcdc551eaf581a022001869225fc6069e9c37cdf3ad702a4d87c4ffa1a6b779f468cd15f78729a4e61016952210266edd4ef2953675faf0662c088a7f620935807d200d65387290b31648e51e253210372ce38027ee95c98cdc54172964fa3aecf9f24b85c139d3d203365d6b691d0502103c96d495bfdd5ba4145e3e046fee45e84a8a48ad05bd8dbb395c011a32cf9f88053ae0400483045022100fc8f367e892acc7a85b26e404005160d8bf0e3dcd87ad0e1dc40744780b5d42602206ae3e6fed3fbc1bd57631bd51c079f1a054f6e44bc9b84be37fa231ff3c0808401473044022007221455aae1bb958c3d08e51cd5aeddf348336c13893176c94ee3289262e570022009119f5878a310fdc530432bd87f47b700cabc6c8b8ac9e5d19ac5795472ef08016952210375e00eb72e29da82b89367947f29ef34afb75e8654f6ea368e0acdfd92976b7c2103a1b26313f430c4b15bb1fdce663207659d8cac749a0e53d70eff01874496feff2103c96d495bfdd5ba4145e3e046fee45e84a8a48ad05bd8dbb395c011a32cf9f88053ae00000000'
+
+    # bitcoin-cli getrawtransaction 12b86edaa71e73a87618770015b063cf0c4ba493d4ae44c623550a10c352d643 1|jq -r .hex
+    # with no witness (non-standard pubkey)
+    raw_tx_hex2 = '0100000001df218a5f902fa36ee494cd6e7cace5f4195254e8079c972a032bb7957d5e16ca29000000fdfd0000483045022100cf761068104195d99e802dddd937b34757c52091ecbe1454cd83fbe3884ec21f02206753764b688cb9d3f9c5a8b060da72d8d562da0871cd0e9ff2ed31b2b88431b2014730440220154aabdee639e11f6eee766d2d4706a4fe692b192a9c79a79c4a1f7f8e7e3bcf02203dcb57025d9aba1b62b99e6e984a64159aa3fe725267df75f9ca7d2a4a30e4f8014c6952210295f75333f88960661ed7186eb8a02486707b8c372dc62efd31d5b280a46ab29d2103683134c811590b0f66d7b936d90fc648b23ec57092eb00b5540d9835f6be236d2103c96d495bfdd5ba4145e3e046fee45e84a8a48ad05bd8dbb395c011a32cf9f88053aeffffffff064092e5dc010000002200203eb5062a0b0850b23a599425289a091c374ca934101d03144f060c5b46a979be406a7aee000000002200200a618b712d918bb1ba59b737c2a37b40d557374754ef2575ce41d08d5f782df940a0dfb200000000220020701a8d401c84fb13e6baf169d59684e17abd9fa216c8cc5b9fc63d622ff8c58d40717759000000002200203eb5062a0b0850b23a599425289a091c374ca934101d03144f060c5b46a979bed8a1aa3500000000220020701a8d401c84fb13e6baf169d59684e17abd9fa216c8cc5b9fc63d622ff8c58dc8111df4000000002200202122f4719add322f4d727f48379f8a8ba36a40ec4473fd99a2fdcfd89a16e04800000000'
 
     def test_parse_version(self):
         tx = Tx.parse(BytesIO(unhexlify(TxTest.raw_tx_hex)))
@@ -468,6 +453,15 @@ class TxTest(TestCase):
         # bitcoin-cli getrawtransaction 8daadcbf5bac325f9b8d7812d82fcca4dd5a594c9f3c7e80727c565ef87e7b73 1|jq ".vout[3].scriptPubKey.hex"
         self.assertEqual(tx.tx_outs[3].script_pubkey.serialize(), unhexlify('0020701a8d401c84fb13e6baf169d59684e17abd9fa216c8cc5b9fc63d622ff8c58d'))
 
+    def test_der_signature(self):
+        tx = Tx.parse(BytesIO(unhexlify(TxTest.raw_tx_hex)))
+        print("script_sig_type=", tx.tx_ins[0].script_sig.type())
+        print("script_pub_key=", tx.tx_ins[0].script_pubkey())
+        want = b'3045022100ed81ff192e75a3fd2304004dcadb746fa5e24c5031ccfcf21320b0277457c98f02207a986d955c6e0cb35d446a89d3f56100f4d7f67801c31967743a9c8e10615bed'
+        der, hash_type = tx.tx_ins[0].der_signature()
+        self.assertEqual(hexlify(der), want)
+        self.assertEqual(hash_type, SIGHASH_ALL)
+
     def test_parse_witness(self):
         tx = Tx.parse(BytesIO(unhexlify(TxTest.raw_tx_hex)))
         # bitcoin-cli getrawtransaction 8daadcbf5bac325f9b8d7812d82fcca4dd5a594c9f3c7e80727c565ef87e7b73 1|jq "[.vin[]|.txinwitness]"
@@ -482,8 +476,8 @@ class TxTest(TestCase):
         ]]
 
         for ix in range(len(tx.tx_ins)):
-            for iy in range(len(tx.witnesses[ix])):
-                self.assertEqual(tx.witnesses[ix][iy], unhexlify(want[ix][iy]))
+            for iy in range(len(tx.tx_ins[ix].script_witness)):
+                self.assertEqual(tx.tx_ins[ix].script_witness[iy], unhexlify(want[ix][iy]))
 
     def test_parse_locktime(self):
         tx = Tx.parse(BytesIO(unhexlify(TxTest.raw_tx_hex)))
@@ -491,7 +485,14 @@ class TxTest(TestCase):
         self.assertEqual(tx.locktime, 0)
 
     def test_serialize(self):
+        raw = unhexlify(TxTest.raw_tx_hex)
+        tx = Tx.parse(BytesIO(raw))
+        self.assertEqual(tx.serialize(), raw)
+
+    def test_txid_and_hash(self):
+        return
         tx = Tx.parse(BytesIO(unhexlify(TxTest.raw_tx_hex)))
-        print("txid=",hexlify(tx.txid()))
-        print("hash=",hexlify(tx.hash()))
-        self.assertEqual(tx.serialize(), unhexlify(TxTest.raw_tx_hex))
+        #bitcoin-cli getrawtransaction 8daadcbf5bac325f9b8d7812d82fcca4dd5a594c9f3c7e80727c565ef87e7b73 1|jq .txid
+        self.assertEqual(hexlify(tx.txid()).decode(), "8daadcbf5bac325f9b8d7812d82fcca4dd5a594c9f3c7e80727c565ef87e7b73")
+        #bitcoin-cli getrawtransaction 8daadcbf5bac325f9b8d7812d82fcca4dd5a594c9f3c7e80727c565ef87e7b73 1|jq .hash
+        self.assertEqual(hexlify(tx.hash()).decode(), "abb466f6a624f4dd1ee1aef477db7714e9193bf373f843446f460dc225362070")
