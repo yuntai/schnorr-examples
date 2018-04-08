@@ -10,8 +10,8 @@ The implementation is based on
 - his youtube on this topic [What is Schnorr, BN, Musig?](https://www.youtube.com/watch?v=thfCtc4jJZo).
 - I also found this blog also helpful - [Key Aggregation for Schnoor Signatures](https://blockstream.com/2018/01/23/musig-key-aggregation-schnorr-signatures.html)
 
-## Extend Tx (transaction) to support segwit
-A new file [wtx.py](wtx.py) contains extension to original [tx.py](tx.py) file for Segwit. 
+## Extensino to Tx (transaction) to support segwit
+A new file [wtx.py](wtx.py) contains extension for Segwit to the original [tx.py](tx.py) from the BP codebase.
 
 Currently (April 8 2018), 
 - parsing and serializing Segwit transaction
