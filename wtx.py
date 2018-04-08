@@ -298,7 +298,6 @@ class Tx:
         if self.tx_ins[input_index].script_pubkey().type() == 'p2wpkh':
             self.tx_ins[input_index].script_witness = script_sig.elements
         else:
-            self.tx_ins[input_index].script_witness = [b'0x00']
             self.tx_ins[input_index].script_sig = script_sig
         # return whether sig is valid using self.verify_input
         return self.verify_input(input_index)

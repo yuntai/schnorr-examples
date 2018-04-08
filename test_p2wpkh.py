@@ -90,3 +90,5 @@ class TxTest(TestCase):
 
         self.assertTrue(tx.sign_input(0, private_key0, SIGHASH_ALL))
         self.assertTrue(tx.sign_input(1, private_key1, SIGHASH_ALL))
+
+        print(hexlify(tx.serialize()))
