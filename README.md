@@ -4,7 +4,7 @@ This repository contains some working exercise code for understanding Bitcoin in
 
 ## Key Aggregation for Schnorr Signatures
 
-[schonnr.py](schonnr.py) and [schonnr_d.py](schonnr_d.py) contain the code simulating schnorr, BN(Bellare-Neven) & MuSig signing and verification using Elliptic curve Cryptography code ([ecc.py](ecc.py)) from the original PB codebase. 
+[schonnr.py](schnorr.py) and [schonnr_d.py](schnorr_d.py) contain the code simulating schnorr, BN(Bellare-Neven) & MuSig signing and verification using Elliptic curve Cryptography code ([ecc.py](ecc.py)) from the original PB codebase. 
 The implementation is based on 
 - Jimmy Song's presentation [Schnorr Signatures](https://prezi.com/amezx3cubxy0/schnorr-signatures/) and 
 - his youtube on this topic [What is Schnorr, BN, Musig?](https://www.youtube.com/watch?v=thfCtc4jJZo).
