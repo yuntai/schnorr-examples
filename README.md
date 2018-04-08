@@ -15,7 +15,7 @@ A new file [wtx.py](wtx.py) contains extension for Segwit to the original [tx.py
 
 Currently (April 8 2018), 
 - parsing and serializing Segwit transaction
-- sign and verification for P2WPK transaction
+- sign and verification for P2WPK transaction [test_p2wpkh.py](test_p2wpkh.py)
 
 are implemented. More to come!
 
