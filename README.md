@@ -9,3 +9,16 @@ The implementation is based on
 - Jimmy Song's presentation [Schnorr Signatures](https://prezi.com/amezx3cubxy0/schnorr-signatures/) and 
 - his youtube on this topic [What is Schnorr, BN, Musig?](https://www.youtube.com/watch?v=thfCtc4jJZo).
 - I also found this blog also helpful - [Key Aggregation for Schnoor Signatures](https://blockstream.com/2018/01/23/musig-key-aggregation-schnorr-signatures.html)
+
+## Extend Tx (transaction) to support segwit
+A new file [wtx.py](wtx.py) contains extension to original [tx.py](tx.py) file for Segwit. 
+
+Currently (April 8 2018), 
+- parsing and serializing Segwit transaction
+- sign and verification for P2WPK transaction
+
+are implemented. More to come!
+
+### Third party code
+All codes are based on PB codebase ([https://github.com/jimmysong/pb-exercises](https://github.com/jimmysong/pb-exercises)) except
+[segwit_addr.py](segwit_addr.py) which is from [https://github.com/sipa/bech32](https://github.com/sipa/bech32).
