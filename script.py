@@ -188,6 +188,10 @@ class Script:
               and type(self.elements[1]) == bytes \
               and len(self.elements[1]) == 0x14:
             return 'p2wpkh'
+        elif self.elements[0] == b'' \
+              and type(self.elements[1]) == bytes \
+              and len(self.elements[1]) == 0x20:
+            return 'p2wsh'
         elif type(self.elements[0]) == bytes \
              and len(self.elements[0]) in (0x47, 0x48, 0x49) \
              and type(self.elements[1]) == bytes \

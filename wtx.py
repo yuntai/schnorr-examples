@@ -15,6 +15,7 @@ from helper import (
     p2pkh_script,
     read_varint,
     SIGHASH_ALL,
+    hash160
 )
 from script import Script
 
@@ -255,12 +256,26 @@ class Tx:
         if tx_in.script_sig.type() == 'blank':
             if tx_in.script_pubkey().type() == 'p2wpkh':
                 sigs_required = 1
+                # TODO: refactor
+                # witness program verification
+                if hash160(tx_in.script_witness[1]) != tx_in.script_pubkey().elements[-1]:
+                    return False
+
                 point = S256Point.parse(tx_in.script_witness[1])
                 der, hash_type = tx_in.der_signature()
                 signature = Signature.parse(der)
                 z = self.sig_hash(input_index, hash_type)
                 if not point.verify(z, signature):
                     return False
+
+            #elif tx_in.script_pubkey().type() == 'p2wsh':
+            #    sigs_required = 1
+            #    point = S256Point.parse(tx_in.script_witness[1])
+            #    der, hash_type = tx_in.der_signature()
+            #    signature = Signature.parse(der)
+            #    z = self.sig_hash(input_index, hash_type)
+            #    if not point.verify(z, signature):
+            #        return False
             else:
                 raise RuntimeError("other witness type not yet supported")
         else:
