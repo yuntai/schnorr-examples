@@ -35,7 +35,6 @@ class Tx:
         """ witness id """
         return double_sha256(self.serialize())[::-1]
 
-
     def __repr__(self):
         tx_ins = ''
         for tx_in in self.tx_ins:
@@ -146,6 +145,47 @@ class Tx:
             output_sum += tx_out.amount
         # return input sum - output sum
         return input_sum - output_sum
+
+    def hash_prevouts(self, hash_type=SIGHASH_ALL):
+        # serialize previous outpoint(tx, index)
+        res = b''
+        for tx_in in self.tx_ins:
+            res += tx_in.prev_tx[::-1]
+            res += int_to_little_endian(tx_in.prev_index, 4)
+        return double_sha256(res)
+
+    def hash_outputs(self, hash_type=SIGHASH_ALL):
+        return double_sha256(b''.join([tx_out.serialize() for tx_out in self.tx_outs]))
+
+    def hash_sequence(self, hash_type=SIGHASH_ALL):
+        # serialize sequence
+        res = b''
+        for tx_in in self.tx_ins:
+            res += int_to_little_endian(tx_in.sequence, 4)
+        return double_sha256(res)
+
+    # only applicable to sigops in version 0 witness program
+    def sig_hash_w0(self, input_index, hash_type):
+        # support only ALL type for now
+        assert hash_type == SIGHASH_ALL
+
+        hash_prevouts = self.hash_prevouts(hash_type)
+        hash_sequence = self.hash_sequence(hash_type)
+        hash_outputs = self.hash_outputs(hash_type)
+
+        result = int_to_little_endian(self.version, 4)
+        result += hashPrevouts;
+        result += hashSequence;
+        tx_in = self.tx_ins[input_index]
+        result += tx_in.prev_tx[::-1]
+        result += int_to_little_endian(tx_in.prev_index, 4)
+        result += "" # scriptCode?
+        result += int_to_little_endian(tx_in.value(), 8)
+        result += int_to_little_endian(tx_in.sequence, 4)
+        result += hashOutputs
+        result += int_to_little_endian(tx_in.locktime, 4)
+        result += int_to_little_endian(hash_type, 4)
+        return double_sha256(result)
 
     def sig_hash(self, input_index, hash_type):
         '''Returns the integer representation of the hash that needs to get
@@ -369,7 +409,16 @@ class TxIn:
     def der_signature(self, index=0):
         '''returns a DER format signature and hash_type if the script_sig
         has a signature'''
-        signature = self.script_sig.der_signature(index=index)
+
+        if self.script_pubkey().type() == 'p2wpkh' and\
+            self.script_sig.type() == 'blank':
+                # witness:      <signature> <pubkey>
+                # scriptSig:    (empty)
+                # scriptPubKey: 0 <20-byte-key-hash> (0x0014{20-byte-key-hash})
+                signature = self.script_witness[0]
+        else:
+            signature = self.script_sig.der_signature(index=index)
+
         # last byte is the hash_type, rest is the signature
         return signature[:-1], signature[-1]
 
@@ -490,7 +539,6 @@ class TxTest(TestCase):
         self.assertEqual(tx.serialize(), raw)
 
     def test_txid_and_hash(self):
-        return
         tx = Tx.parse(BytesIO(unhexlify(TxTest.raw_tx_hex)))
         #bitcoin-cli getrawtransaction 8daadcbf5bac325f9b8d7812d82fcca4dd5a594c9f3c7e80727c565ef87e7b73 1|jq .txid
         self.assertEqual(hexlify(tx.txid()).decode(), "8daadcbf5bac325f9b8d7812d82fcca4dd5a594c9f3c7e80727c565ef87e7b73")

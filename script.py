@@ -173,6 +173,10 @@ class Script:
             # p2pkh:
             # OP_DUP OP_HASH160 <20-byte hash> <OP_EQUALVERIFY> <OP_CHECKSIG>
             return 'p2pkh'
+        elif type(self.elements[0]) == bytes \
+            and len(self.elements[0]) == 33 \
+            and self.elements[-1] == 0xac:
+            return 'p2pk'
         elif self.elements[0] == 0xa9 \
              and type(self.elements[1]) == bytes \
              and len(self.elements[1]) == 0x14 \
@@ -180,6 +184,10 @@ class Script:
             # p2sh:
             # OP_HASH160 <20-byte hash> <OP_EQUAL>
             return 'p2sh'
+        elif self.elements[0] == b'' \
+              and type(self.elements[1]) == bytes \
+              and len(self.elements[1]) == 0x14:
+            return 'p2wpkh'
         elif type(self.elements[0]) == bytes \
              and len(self.elements[0]) in (0x47, 0x48, 0x49) \
              and type(self.elements[1]) == bytes \
@@ -258,6 +266,12 @@ class Script:
             # hash160 is the 2nd element
             h160 = self.elements[1]
             # convert to p2sh address using h160_to_p2sh_address (remember testnet)
+            return h160_to_p2sh_address(h160, testnet)
+        elif sig_type == 'p2pk':
+            h160 = hexlify(self.elements[0]).decode()
+            return h160_to_p2pkh_address(h160)
+        elif sig_type == 'p2wpkh':
+            h160 = self.elements[1]
             return h160_to_p2sh_address(h160, testnet)
 
 
