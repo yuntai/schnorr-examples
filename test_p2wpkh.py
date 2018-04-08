@@ -88,5 +88,5 @@ class TxTest(TestCase):
         hash_preimage=unhexlify("0100000096b827c8483d4e9b96712b6713a7b68d6e8003a781feba36c31143470b4efd3752b0a642eea2fb7ae638c36f6252b6750293dbe574a806984b8e4d8548339a3bef51e1b804cc89d182d279655c3aa89e815b1b309fe287d9b2b55d57b90ec68a010000001976a9141d0f172a0ecb48aee1be1f2687d2963ae33f71a188ac0046c32300000000ffffffff863ef3e1a92afbfdb97f31ad0fc7683ee943e9abcf2501590ff8f6551f47e5e51100000001000000")
         self.assertTrue(tx.sig_hash_w0_preimage(1, SIGHASH_ALL), hash_preimage)
 
-        #self.assertTrue(tx.sign_input(0, private_key0, SIGHASH_ALL))
+        self.assertTrue(tx.sign_input(0, private_key0, SIGHASH_ALL))
         self.assertTrue(tx.sign_input(1, private_key1, SIGHASH_ALL))
