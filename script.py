@@ -2,7 +2,7 @@ from binascii import hexlify, unhexlify
 from io import BytesIO
 from unittest import TestCase
 
-from helper import h160_to_p2pkh_address, h160_to_p2sh_address
+from helper import h160_to_p2pkh_address, h160_to_p2sh_address, hash160
 
 
 OP_CODES = {
@@ -268,11 +268,14 @@ class Script:
             # convert to p2sh address using h160_to_p2sh_address (remember testnet)
             return h160_to_p2sh_address(h160, testnet)
         elif sig_type == 'p2pk':
-            h160 = hexlify(self.elements[0]).decode()
-            return h160_to_p2pkh_address(h160)
+            return h160_to_p2pkh_address(hash160(self.elements[0]), testnet)
         elif sig_type == 'p2wpkh':
-            h160 = self.elements[1]
-            return h160_to_p2sh_address(h160, testnet)
+            import segwit_addr
+            if self.elements[0] == b'': 
+                witver = 0
+            else:
+                assert 0
+            return segwit_addr.encode("bc", witver, self.elements[1])
 
 
 class ScriptTest(TestCase):
