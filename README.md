@@ -1,4 +1,4 @@
-# Programming Blochain Exercise
+# Programming Blockchain Exercise
 
 This repository contains some working exercise code for understanding Bitcoin internals. The code is based off of and extends the codebase used in ["Programming Blockchain"](http://programmingblockchain.com/)  seminar given by [Jimmy Song](https://twitter.com/jimmysong). The original Programming Blockchain(PB) codebase can be found in [https://github.com/jimmysong/pb-exercises](https://github.com/jimmysong/pb-exercises).
 
