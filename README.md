@@ -6,7 +6,7 @@ The implementation is based on
 - Jimmy Song's presentation [Schnorr Signatures](https://prezi.com/amezx3cubxy0/schnorr-signatures/) and 
 - his youtube on this topic [What is Schnorr, BN, Musig?](https://www.youtube.com/watch?v=thfCtc4jJZo)
 
-I also found this blog helpful - [Key Aggregation for Schnoor Signatures](https://blockstream.com/2018/01/23/musig-key-aggregation-schnorr-signatures.html)
+I also found this blog helpful - [Key Aggregation for Schnorr Signatures](https://blockstream.com/2018/01/23/musig-key-aggregation-schnorr-signatures.html)
 
 
 ## Extensino to Tx (transaction) to support segwit
