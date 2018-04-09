@@ -1,15 +1,16 @@
 ## Key Aggregation example for Schnorr Signatures
 
-[schonnr/schonnr.py](schnorr/schnorr.py) and [schnorr/schonnr_d.py](schnorr_d/schnorr_d.py) contain the code simulating the signing and verifying schnorr, BN(Bellare-Neven) & MuSig scheme. The code is based on Elliptic curve Cryptography implementation ([ecc.py](ecc.py)) from the course material of [Programming Blockchain](http://programmingblockchain.com) seminar given by [Jimmy Song](https://twitter.com/jimmysong). The original Programming Blockchain(PB) codebase can be found in [https://github.com/jimmysong/pb-exercises](https://github.com/jimmysong/pb-exercises).
+[schonnr/schonnr.py](schnorr/schnorr.py) and [schnorr/schonnr_d.py](schnorr_d/schnorr_d.py) contain the code simulating the signing and verifying schnorr, BN(Bellare-Neven) & MuSig scheme. The code is based on Elliptic Curve Cryptography implementation ([ecc.py](ecc.py)) from the course material of [Programming Blockchain](http://programmingblockchain.com) seminar given by [Jimmy Song](https://twitter.com/jimmysong). The original Programming Blockchain(PB) codebase can be found in [https://github.com/jimmysong/pb-exercises](https://github.com/jimmysong/pb-exercises).
 
 The implementation is based on 
 - Jimmy Song's presentation [Schnorr Signatures](https://prezi.com/amezx3cubxy0/schnorr-signatures/) and 
 - his youtube on this topic [What is Schnorr, BN, Musig?](https://www.youtube.com/watch?v=thfCtc4jJZo).
-- I also found this blog also helpful - [Key Aggregation for Schnoor Signatures](https://blockstream.com/2018/01/23/musig-key-aggregation-schnorr-signatures.html)
+
+I also found this blog helpful - [Key Aggregation for Schnoor Signatures](https://blockstream.com/2018/01/23/musig-key-aggregation-schnorr-signatures.html)
 
 
 ## Extensino to Tx (transaction) to support segwit
-A new file [wtx.py](wtx.py) contains extension for Segwit to the original [tx.py](tx.py) from the PB codebase.
+[wtx.py](wtx.py) contains extension for Segwit to the original [tx.py](tx.py) from the PB codebase.
 
 Currently (April 8 2018), 
 - parsing and serializing Segwit transaction
