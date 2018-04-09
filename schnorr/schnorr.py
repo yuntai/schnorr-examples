@@ -8,7 +8,8 @@
 # additional pointer for MuSig
 # Key Aggregation for Schnoor Signatures(https://blockstream.com/2018/01/23/musig-key-aggregation-schnorr-signatures.html)
 
-
+import sys
+sys.path.append("..")
 import ecc
 from ecc import PrivateKey
 from random import randint
