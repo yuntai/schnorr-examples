@@ -1,6 +1,6 @@
 ## Key Aggregation example for Schnorr Signatures
 
-[schonrr/schonnr.py](schnorr/schnorr.py) and [schnorr/schonnr_d.py](schnorr/schnorr_d.py) contain the code simulating the signing and verifying schnorr, BN(Bellare-Neven) & MuSig scheme. The code is based on Elliptic Curve Cryptography implementation ([ecc.py](ecc.py)) from the course material of [Programming Blockchain](http://programmingblockchain.com) seminar given by [Jimmy Song](https://twitter.com/jimmysong). The original Programming Blockchain(PB) codebase can be found in [https://github.com/jimmysong/pb-exercises](https://github.com/jimmysong/pb-exercises).
+[schnorr/schnorr.py](schnorr/schnorr.py) and [schnorr/schonnr_d.py](schnorr/schnorr_d.py) contain the code simulating the signing and verifying schnorr, BN(Bellare-Neven) & MuSig scheme. The code is based on Elliptic Curve Cryptography implementation ([ecc.py](ecc.py)) from the course material of [Programming Blockchain](http://programmingblockchain.com) seminar given by [Jimmy Song](https://twitter.com/jimmysong). The original Programming Blockchain(PB) codebase can be found in [https://github.com/jimmysong/pb-exercises](https://github.com/jimmysong/pb-exercises).
 
 The implementation is based on 
 - Jimmy Song's presentation [Schnorr Signatures](https://prezi.com/amezx3cubxy0/schnorr-signatures/) and 
@@ -9,7 +9,7 @@ The implementation is based on
 I also found this blog helpful - [Key Aggregation for Schnorr Signatures](https://blockstream.com/2018/01/23/musig-key-aggregation-schnorr-signatures.html)
 
 ## Discrete Log Contracts example
-[schonrr/dlc.py](schonrr/dlc.py) to simulate DLC execution using [ecc.py](ecc.py)
+[schnorr/dlc.py](schnorr/dlc.py) to simulate DLC execution using [ecc.py](ecc.py)
 
 ## Extensino to Tx (transaction) to support segwit
 [wtx.py](wtx.py) contains extension for Segwit to the original [tx.py](tx.py) from the PB codebase.
