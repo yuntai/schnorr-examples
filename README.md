@@ -8,6 +8,8 @@ The implementation is based on
 
 I also found this blog helpful - [Key Aggregation for Schnorr Signatures](https://blockstream.com/2018/01/23/musig-key-aggregation-schnorr-signatures.html)
 
+## Discrete Log Contracts example
+[schonnr/dlc.py](schonnr/dlc.py) to simulate DLC execution using [ecc.py](ecc.py)
 
 ## Extensino to Tx (transaction) to support segwit
 [wtx.py](wtx.py) contains extension for Segwit to the original [tx.py](tx.py) from the PB codebase.
