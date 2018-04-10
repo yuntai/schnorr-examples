@@ -10,6 +10,7 @@ I also found this blog helpful - [Key Aggregation for Schnorr Signatures](https:
 
 ## Discrete Log Contracts example
 [schnorr/dlc.py](schnorr/dlc.py) to simulate DLC execution using [ecc.py](ecc.py)
+Based on [Discreet Log Contracts](https://adiabat.github.io/dlc.pdf) paper by [Tadge Dryja](https://twitter.com/tdryja).
 
 ## Extensino to Tx (transaction) to support segwit
 [wtx.py](wtx.py) contains extension for Segwit to the original [tx.py](tx.py) from the PB codebase.
