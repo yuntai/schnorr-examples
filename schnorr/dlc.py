@@ -16,11 +16,13 @@ def B(v):
     return v.to_bytes(256//8, 'little')
 
 class Tx:
-    def __init__(self, pub):
-        self.pub = pub
+    # output pubkey (address) corresponding to a specific value (winning number)
+    def __init__(self, output_pub):
+        self.output_pub = output_pub
 
+    # simplifcation - instead of signing transaction secret (discrete log of output_pub is provided)
     def redeem(self, s):
-        return PrivateKey(s).point == self.pub
+        return PrivateKey(s).point == self.output_pub
 
 class Agent:
     def __init__(self):
@@ -30,13 +32,12 @@ class Agent:
     def point(self):
         return self.pk.point
 
-    # populate Contract Execution Transactions
+    # populate Contract Execution Transactions for a range of possible values
     # stored on the agent's computer
-    # using V, R and a range of values
+    # using V, R and a range of values (1 ~ 6)
     def CET(self, V, R, vals):
-        # calculate public key where payout to be sent when winning the bet
+        # calculate public key to where the payout to be sent for each possible value
         pubout = lambda m: self.pk.point + R - HI(H(B(m)), R.sec()) * V
-        # txs signed by counterparty
         self.txs = {m: Tx(pubout(m)) for m in vals}
 
     # sign & broadcast
