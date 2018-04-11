@@ -20,7 +20,7 @@ class Tx:
     def __init__(self, output_pub):
         self.output_pub = output_pub
 
-    # simplifcation - instead of signing transaction secret (discrete log of output_pub is provided)
+    # simplifcation - instead of signing transaction, secret (discrete log of output_pub) is provided
     def redeem(self, s):
         return PrivateKey(s).point == self.output_pub
 
