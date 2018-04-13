@@ -40,6 +40,9 @@ class FieldElement:
         # use: self.__class__(num, prime)
         return self.__class__(num, prime)
 
+    def __neg__(self):
+        return self.__class__(self.prime - self.num, self.prime)
+
     def __sub__(self, other):
         if self.prime != other.prime:
             raise RuntimeError('Primes must be the same')
@@ -100,6 +103,11 @@ class FieldElementTest(TestCase):
         a = FieldElement(17, 31)
         b = FieldElement(21, 31)
         self.assertEqual(a+b, FieldElement(7, 31))
+
+    def test_neg(self):
+        a = FieldElement(2, 31)
+        b = -a
+        self.assertEqual(a+b, FieldElement(0, 31))
 
     def test_sub(self):
         a = FieldElement(29, 31)
@@ -163,6 +171,12 @@ class Point:
     def __ne__(self, other):
         return self.x != other.x or self.y != other.y \
             or self.a != other.a or self.b != other.b
+
+    def __sub__(self, other):
+        return self + (-other)
+
+    def __neg__(self):
+        return self.__class__(None, None, self.a, self.b) if self.x is None else self.__class__(self.x, -self.y, self.a, self.b)
 
     def __repr__(self):
         if self.x is None:
@@ -242,6 +256,18 @@ class PointTest(TestCase):
         # these should not raise an error
         Point(x=3, y=-7, a=5, b=7)
         Point(x=18, y=77, a=5, b=7)
+
+    def test_neg(self):
+        p = Point(x=3, y=-7, a=5, b=7)
+        q = -p
+        self.assertEqual(p+q, Point(None,None,5,7))
+
+    def test_sub(self):
+        a = Point(x=3, y=7, a=5, b=7)
+        b = Point(x=-1, y=-1, a=5, b=7)
+        c = a + b
+        self.assertEqual(c - a, b)
+        self.assertEqual(c - b, a)
 
     def test_add0(self):
         a = Point(x=None, y=None, a=5, b=7)
@@ -400,6 +426,7 @@ class S256Field(FieldElement):
 class S256Point(Point):
     bits = 256
 
+
     def __init__(self, x, y, a=None, b=None):
         a, b = S256Field(A), S256Field(B)
         if x is None:
@@ -499,6 +526,8 @@ class S256Point(Point):
             return S256Point(x, even_beta)
         else:
             return S256Point(x, odd_beta)
+
+S256Point.inf = S256Point(None, None)
 
 
 G = S256Point(
@@ -659,10 +688,9 @@ class SignatureTest(TestCase):
 
 
 class PrivateKey:
-
-    def __init__(self, secret):
-        self.secret = secret
-        self.point = secret*G
+    def __init__(self, secret = None):
+      self.secret = secret if secret is not None else randint(0, 2**256)
+      self.point = self.secret*G
 
     def hex(self):
         return '{:x}'.format(self.secret).zfill(64)

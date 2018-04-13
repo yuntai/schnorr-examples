@@ -15,11 +15,6 @@ from ecc import PrivateKey
 from random import randint
 from helper import double_sha256, little_endian_to_int
 
-# patch
-ecc.FieldElement.__neg__ = lambda self: self.__class__(self.prime - self.num, self.prime)
-ecc.Point.__sub__ = lambda self, other: self + (-other)
-ecc.Point.__neg__ = lambda self: self.__class__(None, None, self.a, self.b) if self.x is None else self.__class__(self.x, -self.y, self.a, self.b)
-
 # hash
 def H(*args):
     return double_sha256(b''.join(args))
