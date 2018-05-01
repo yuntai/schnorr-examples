@@ -10,10 +10,10 @@ def H_(*args):
   args = [v.sec() if isinstance(v, ecc.Point) else _sb(v) for v in args]
   return double_sha256(b''.join(args))
 
-gen_nonce = lambda: randint(0,2*256)
+ri = lambda: randint(0,2**256)
 
 def H(*args):
     return little_endian_to_int(H_(*args))
 
 def gen_msg():
-    return randint(0, 2**256).to_bytes(256//8, 'little')
+    return ri().to_bytes(256//8, 'little')
