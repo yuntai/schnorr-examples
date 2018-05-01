@@ -443,13 +443,14 @@ class S256Point(Point):
             return 'Point({},{})'.format(self.x, self.y)
 
     def __rmul__(self, coefficient):
+        coefficient %= N
         # current will undergo binary expansion
         current = self
         # result is what we return, starts at 0
         result = S256Point(None, None)
         # we double 256 times and add where there is a 1 in the binary
         # representation of coefficient
-        for i in range(self.bits):
+        for i in range(coefficient.bit_length()):
             if coefficient & 1:
                 result += current
             current += current

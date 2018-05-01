@@ -31,8 +31,8 @@ def schnorr():
     point = pk.point # public point
 
     def sign(pk, z):
-        k = randint(0, 2**256)
-        R = k * ecc.G
+        k = randint(0, 2**256) # nonce
+        R = k * ecc.G          # nonce point
         s = (k + HI(R.sec(), z) * pk.secret)%ecc.N
         return R, s
 
