@@ -31,6 +31,8 @@ def str_to_bytes(s, encoding='ascii'):
 def hash160(s):
     return hashlib.new('ripemd160', hashlib.sha256(s).digest()).digest()
 
+def sha256(s):
+    return hashlib.sha256(s).digest()
 
 def double_sha256(s):
     return hashlib.sha256(hashlib.sha256(s).digest()).digest()
