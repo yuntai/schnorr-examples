@@ -35,3 +35,5 @@ privkey = base_secret + int.from_bytes(v, 'big')
 
 localprivkey_expected = 0xcbced912d3b21bf196a766651e436aff192362621ce317704ea2f75d87e7be0f
 assert privkey == localprivkey_expected
+
+
