@@ -6,6 +6,7 @@
 import hashlib
 import hmac
 from unittest import TestCase
+from io import BytesIO
 
 import ecc
 from helper import hash160, encode_base58_checksum
@@ -85,8 +86,8 @@ def CKDpub(K_par, c_par, i):
     return K_i, I_R
 
 class ExtendedKey:
-  def __init__(self, parent, depth, key, chain_code, child_index, network_type):
-    self.parent_id = parent.identifier() if parent is not None else b'\x00\x00\x00\x00'
+  def __init__(self, parent_fingerprint, depth, key, chain_code, child_index, network_type):
+    self.parent_fingerprint = parent_fingerprint
     self.depth = depth
     self.key = key
     self.chain_code = chain_code
@@ -112,7 +113,7 @@ class ExtendedKey:
     "78 bytes structure"
     result = ser_32(self.version())
     result += bytes([self.depth])
-    result += self.parent_id[:4]
+    result += self.parent_fingerprint
     result += ser_32(self.child_index)
     result += self.chain_code
     result += self.ser_key()
@@ -122,31 +123,50 @@ class ExtendedKey:
   @classmethod
   def parse(cls, key_bin):
     s = BytesIO(key_bin)
-    ver = s.read(4)
-    network_type, key_type = VER_RMAP[ver]
-
-    depth = s.read(1)
-    fingerprint = s.read(32)
-    child_index = s.read(32)
+    ver = int.from_bytes(s.read(4), 'big')
+    depth = int.from_bytes(s.read(1), 'big')
+    parent_fingerprint = s.read(4)
+    child_index = int.from_bytes(s.read(4), 'big')
     chain_code = s.read(32)
-    key = s.read(33)
+    rawkey = s.read(33)
+    network_type, key_type = VER_RMAP[ver]
     cls = ExtendedPrivateKey if key_type == 'private' else ExtendedPublicKey
-    return cls(None, depth, key, chain_code, child_index, network_type)
+    if key_type == 'private':
+      assert bytes([rawkey[0]]) == b'\x00'
+      key = ecc.PrivateKey(parse_256(rawkey[1:]))
+      res = ExtendedPrivateKey(parent_fingerprint, depth, key, chain_code, child_index, network_type)
+    elif key_type == 'public':
+      key = S256Point.parse(rawkey)
+      res = ExtendedPublicKey(parent_fingerprint, depth, key, chain_code, child_index, network_type)
+    return res
 
-  def fingerprint():
-    return id()[:32]
+  def fingerprint(self):
+    return self.identifier()[:4]
 
   def encode(self):
     return encode_base58_checksum(self.serialize())
 
 
+  def __eq__(self, other):
+    if type(self) != type(other):
+      return False;
+    if any(self.__dict__[k] != other.__dict__[k] for k in
+           ['network_type','depth','parent_fingerprint','child_index','chain_code']):
+      return false
+    if isinstance(self, ExtendedPrivateKey):
+      return self.key.secret == other.key.secret
+    elif isinstance(self, ExtendedPublicKey):
+      # __eq__ is defined for ecc.Point
+      return self.key == other.key
+    else:
+      raise Exception("Unknown type!")
+
 class ExtendedPrivateKey(ExtendedKey):
-  def __init__(self, parent, depth, key, chain_code, child_index, network_type):
-    self.parent = parent # TODO: don't want to do this
-    ExtendedKey.__init__(self, parent, depth, key, chain_code, child_index, network_type)
+  def __init__(self, parent_fingerprint, depth, key, chain_code, child_index, network_type):
+    ExtendedKey.__init__(self, parent_fingerprint, depth, key, chain_code, child_index, network_type)
 
   def neuter(self):
-    return ExtendedPublicKey(self.parent, self.depth, point(self.key), self.chain_code,
+    return ExtendedPublicKey(self.parent_fingerprint, self.depth, point(self.key), self.chain_code,
                              self.child_index,
                              self.network_type)
 
@@ -158,7 +178,7 @@ class ExtendedPrivateKey(ExtendedKey):
     res = CKDpriv(self.key, self.chain_code, ix)
     if res is not None:
       pk, chain_code = res
-      key = ExtendedPrivateKey(self, self.depth+1, pk, chain_code, ix,
+      key = ExtendedPrivateKey(self.fingerprint(), self.depth+1, pk, chain_code, ix,
                         self.network_type)
       return key
 
@@ -169,8 +189,8 @@ class ExtendedPrivateKey(ExtendedKey):
     return concat(b'\x00', ser_256(self.key.secret))
 
 class ExtendedPublicKey(ExtendedKey):
-  def __init__(self, parent, depth, key, chain_code, child_index, network_type):
-    ExtendedKey.__init__(self, parent, depth, key, chain_code, child_index, network_type)
+  def __init__(self, parent_fingerprint, depth, key, chain_code, child_index, network_type):
+    ExtendedKey.__init__(self, parent_fingerprint, depth, key, chain_code, child_index, network_type)
 
   def version(self):
     return VERSIONS[(self.network_type, 'public')]
@@ -180,7 +200,7 @@ class ExtendedPublicKey(ExtendedKey):
     res = CKDpub(self.key, self.chain_code, ix)
     if res is not None:
       pk, chain_code = res
-      key = ExtendedPublicKeyKey(self, self.depth+1, pk, chain_code, ix,
+      key = ExtendedPublicKeyKey(self.fingerprint(), self.depth+1, pk, chain_code, ix,
                         self.network_type)
       return key
 
@@ -196,7 +216,7 @@ class MasterKey(ExtendedPrivateKey):
     while res is None:
       res = master_key_gen(seed)
     key, chain_code = res
-    ExtendedPrivateKey.__init__(self, None, 0, ecc.PrivateKey(key), chain_code, 0, network_type)
+    ExtendedPrivateKey.__init__(self, b'\x00\x00\x00\x00', 0, ecc.PrivateKey(key), chain_code, 0, network_type)
 
 class KeyChain:
   def __init__(self, seed, network_type='testnet'):
@@ -219,9 +239,13 @@ class KeyChain:
     return cur
 
 class ExtendedKeyTest(TestCase):
-  #def private_key_roundtrip():
-  #  pk = ExtendedPrivateKey(ecc.PrivateKey())
-  #  self.assertTrue(True)
+  def test_serde_roundtrip(self):
+    seed = bytes.fromhex("000102030405060708090a0b0c0d0e0f")
+    path = "m/0H/1/2H/2/1000000000"
+    key = KeyChain(seed, 'mainnet').derive(path)
+    key_bin = key.serialize()
+    expected = ExtendedKey.parse(key_bin)
+    self.assertEqual(key, expected)
 
   def fullpath_test(self, seed, path, expected):
     cur = None
