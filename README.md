@@ -22,6 +22,9 @@ Currently (April 8 2018),
 
 are implemented. More to come as my learning about bitcoin progresses!
 
+## HD Wallet
+[keychain.py](keychain.py) contains an initial implementation of the key derivation scheme specified in [BIP-0032] (https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki). It is based on Elliptic Curve Cryptography implementation (ecc.py) from the course material of Programming Blockchain seminar given by Jimmy Song. The original Programming Blockchain(PB) codebase can be found in https://github.com/jimmysong/pb-exercises.
+
 ### Third party code
 All codes are based on PB codebase ([https://github.com/jimmysong/pb-exercises](https://github.com/jimmysong/pb-exercises)) except
 [segwit_addr.py](segwit_addr.py) which is from [https://github.com/sipa/bech32](https://github.com/sipa/bech32).
